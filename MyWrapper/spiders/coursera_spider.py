@@ -11,7 +11,7 @@ class CourseraSpider(scrapy.Spider):
 
         if language is not None:
             self.start_urls = [
-                'https://www.coursera.org/courses?query={0}&{1}={2}'.format(quote(query), quote('refinementList[language][0]'), quote(language))
+                'https://www.coursera.org/courses?query={0}&{1}={2}'.format(quote(query), quote('indices[test_all_products][refinementList][language][0]'), quote(language))
             ]
         else:
             self.start_urls = [
@@ -21,19 +21,23 @@ class CourseraSpider(scrapy.Spider):
     def parse(self, response):
         # follow links to author pages
         for course in response.css('li.ais-InfiniteHits-item'):
-            badge = course.css('div.card-info span.product-badge::text')
-            if len(badge) < 1 or badge.extract_first() != 'Course':
+            badge = course.css('div.card-info div::text')
+            if len(badge) < 1 or badge.extract_first().lower() != 'course':
                 continue
 
-            href = course.css('a.rc-AlgoliaSearchCard')[0]
+            href = course.css('a')[0]
             yield response.follow(href, self.parse_course)
 
         # follow pagination links
-        for _ in response.css('button.ais-InfiniteHits-loadMore'):
-            self.page += 1
-            next_list_url = '{0}&{1}={2}'.format(self.start_urls[0], quote('indices[test_products][page])'), self.page)
-            print(next_list_url)
-            yield response.follow(next_list_url, self.parse)
+        nav = response.css('nav')
+        if 0 < len(nav):
+            li = nav.css('ul li')
+            self.last_page = int(li[len(li)-2].css('span::text').extract_first())
+            if self.page < self.last_page:
+                self.page += 1
+                next_list_url = '{0}&{1}={2}'.format(self.start_urls[0], quote('indices[test_all_products][page]'), self.page)
+                print(next_list_url)
+                yield response.follow(next_list_url, self.parse)
 
     def parse_course(self, response):
         def extract_with_css(query, index=0):
