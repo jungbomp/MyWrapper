@@ -9,7 +9,7 @@ This is a basic implementation of web crawling by Scrapy in Python. The target s
 
 ### Run
 ```bash
-$python MyWrapper.py
+$python myWrapper.py
 ```
 
 ### Status
